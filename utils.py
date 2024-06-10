@@ -275,9 +275,14 @@ class RotNetDataGenerator(Iterator):
                 image = self.images[j]
             else:
                 is_color = int(self.color_mode == 'rgb')
+                # print("Image: " + self.filenames[j] + '\n')
                 image = cv2.imread(self.filenames[j], is_color)
-                if is_color:
-                    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+                if image is None:
+                    print("Image failed to load")
+                else:
+                    if is_color:
+                        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
             if self.rotate:
                 # get a random angle
@@ -436,6 +441,115 @@ def display_examples(model, input, num_images=5, size=None, crop_center=False,
         plt.axis('off')
 
     plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
+
+    if save_path:
+        plt.savefig(save_path)
+
+def display_angle_predictions(model, input, num_images=5, size=None, crop_center=False,
+                     crop_largest_rect=False, preprocess_func=None, save_path=None):
+    """
+    Given a model that predicts the rotation angle of an image,
+    and a NumPy array of images or a list of image paths, display
+    the specified number of example images in two columns:
+    Original and Rotated with Predicted Angle.
+    """
+    
+    def read_and_convert_image(filename):
+        image = cv2.imread(filename)
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        return image
+    
+    def angle_to_cardinal(angle):
+        directions = ["North", "North-East", "East", "South-East", "South", "South-West", "West", "North-West"]
+        idx = int((angle + 22.5) // 45) % 8
+        return directions[idx]
+
+    if isinstance(input, np.ndarray):
+        images = input
+        N, h, w = images.shape[:3]
+        if not size:
+            size = (h, w)
+        indexes = np.random.choice(N, num_images)
+        images = images[indexes, ...]
+    else:
+        images = []
+        filenames = input
+        N = len(filenames)
+        indexes = np.random.choice(N, num_images)
+        for i in indexes:
+            image = read_and_convert_image(filenames[i])
+            images.append(image)
+        images = np.asarray(images)
+    
+    x = []
+    y = []
+    for image in images:
+        rotation_angle = np.random.randint(360) 
+        rotated_image = generate_rotated_image(
+            image,
+            rotation_angle,
+            size=size,
+            crop_center=crop_center,
+            crop_largest_rect=crop_largest_rect
+        )
+        x.append(rotated_image)
+        y.append(rotation_angle)
+    
+    x = np.asarray(x, dtype='float32')
+    y = np.asarray(y, dtype='float32')
+    
+    if x.ndim == 3:
+        x = np.expand_dims(x, axis=3)
+    
+    y_categorical = to_categorical(y, num_classes=360)
+    
+    x_rot = np.copy(x)
+    
+    if preprocess_func:
+        x = preprocess_func(x)
+    
+    y_pred = np.argmax(model.predict(x), axis=1)
+    
+    plt.figure(figsize=(10.0, 2 * num_images))
+    
+    title_fontdict = {
+        'fontsize': 14,
+        'fontweight': 'bold'
+    }
+    
+    fig_number = 0
+    for rotated_image, true_angle, predicted_angle in zip(x_rot, y, y_pred):
+        original_image = rotate(rotated_image, -true_angle)
+        if crop_largest_rect:
+            original_image = crop_largest_rectangle(original_image, -true_angle, *size)
+        
+        if x.shape[3] == 1:
+            options = {'cmap': 'gray'}
+        else:
+            options = {}
+        
+        fig_number += 1
+        ax = plt.subplot(num_images, 2, fig_number)
+        if fig_number == 1:
+            plt.title('Original\n', fontdict=title_fontdict)
+        plt.imshow(np.squeeze(original_image).astype('uint8'), **options)
+        plt.axis('off')
+        
+        fig_number += 1
+        ax = plt.subplot(num_images, 2, fig_number)
+        if fig_number == 2:
+            plt.title('Rotated\n', fontdict=title_fontdict)
+        cardinal_direction = angle_to_cardinal(predicted_angle)
+        ax.text(
+            0.5, 1.05, 'Predicted Angle: {0} ({1})'.format(predicted_angle, cardinal_direction),
+            horizontalalignment='center',
+            transform=ax.transAxes,
+            fontsize=11
+        )
+        plt.imshow(np.squeeze(rotated_image).astype('uint8'), **options)
+        plt.axis('off')
+    
+    plt.tight_layout(pad=0.2, w_pad=0.2, h_pad=1.0)
 
     if save_path:
         plt.savefig(save_path)

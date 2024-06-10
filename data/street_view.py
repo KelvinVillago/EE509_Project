@@ -38,3 +38,17 @@ def get_filenames(path):
     test_filenames = image_paths[n_train_samples:]
 
     return train_filenames, test_filenames
+
+def get_files(path):
+    if not os.path.exists(path):
+        os.makedirs(path)
+        download(path)
+    elif len(os.listdir(path)) == 0:
+        download(path)
+
+    image_paths = []
+    for filename in os.listdir(path):
+        # print("File: " + filename + '\n')
+        image_paths.append(path+'/'+filename)
+    
+    return image_paths

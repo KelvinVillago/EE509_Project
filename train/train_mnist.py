@@ -67,7 +67,7 @@ checkpointer = ModelCheckpoint(
     filepath=os.path.join(output_folder, model_name + '.hdf5'),
     save_best_only=True
 )
-early_stopping = EarlyStopping(patience=2)
+early_stopping = EarlyStopping(patience=3)
 tensorboard = TensorBoard()
 
 # training loop
@@ -89,3 +89,19 @@ model.fit_generator(
     verbose=1,
     callbacks=[checkpointer, early_stopping, tensorboard]
 )
+
+nb_test_samples = X_test.shape[0]
+evaluation_generator = RotNetDataGenerator(
+    X_test,
+    batch_size=batch_size,
+    preprocess_func=binarize_images
+)
+
+scores = model.evaluate(
+    evaluation_generator,
+    steps=nb_test_samples // batch_size,
+    verbose=1
+)
+
+print('Test loss:', scores[0])
+print('Test angle error:', scores[1])
