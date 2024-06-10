@@ -1,3 +1,8 @@
+# Added Work (Kelvin Villago)
+Run `python train/train_image2.py` to train on the images in the data folder. The photos used for training are stored in the data folder under the photos folder. The model file generated in the `train_image2.py` code is stored in the train/models folder. That file has to be moved to the main models folder for the Jupyter Notebook to access it. The results of the code can be accessed using the `test/test_photos.ipynb` file. 
+
+The `image_resizer.py` and the `image_generator.py` take photos from a path and outputs the generated photos into an output path. The paths can be changed as needed, but have to be changed in the software file.
+
 # RotNet
 
 This repository contains the code necessary to train and test convolutional neural networks (CNNs) for predicting the rotation angle of an image to correct its orientation. There are scripts to train two models, one on [MNIST](http://yann.lecun.com/exdb/mnist/) and another one on the [Google Street View dataset](http://crcv.ucf.edu/data/GMCP_Geolocalization/). Since the data for this application is generated on-the-fly, you can also train using your own images in a similar way. A detailed explanation of the code and motivation for this project can be found in [my blog](https://d4nst.github.io/).
@@ -27,4 +32,3 @@ You can also specify the following command line arguments:
 - `-o, --output` to specify the output image or directory.
 - `-b, --batch_size` to specify the batch size used to run the model.
 - `-c, --crop` to crop out the black borders after rotating the images.
-
