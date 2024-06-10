@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from keras.preprocessing.image import Iterator
 from keras.utils.np_utils import to_categorical
 import keras.backend as K
+import re
 
 
 def angle_difference(x, y):
@@ -318,13 +319,70 @@ class RotNetDataGenerator(Iterator):
             batch_x = self.preprocess_func(batch_x)
 
         return batch_x, batch_y
+    
+    def _get_batches_of_files(self, index_array):
+        # Create array to hold the images
+        batch_x = np.zeros((len(index_array),) + self.input_shape, dtype='float32')
+        # Create array to hold the labels
+        batch_y = np.zeros(len(index_array), dtype='float32')
+
+        # Regex pattern to extract the rotation angle from the filename
+        pattern = re.compile(r'_([0-9]+)\.')
+
+        # Iterate through the current batch
+        for i, j in enumerate(index_array):
+            is_color = int(self.color_mode == 'rgb')
+            image = cv2.imread(self.filenames[j], is_color)
+
+            if image is None:
+                print(f"Image at {self.filenames[j]} failed to load")
+            else:
+                if is_color:
+                    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+            # Extract the rotation angle from the filename
+            match = pattern.search(self.filenames[j])
+            if match:
+                rotation_angle = int(match.group(1))
+            else:
+                raise ValueError(f"Filename {self.filenames[j]} does not contain a valid rotation angle")
+
+            # Crop the image if needed
+            if self.crop_center or self.crop_largest_rect:
+                image = generate_rotated_image(
+                    image,
+                    0,  # No rotation needed, just cropping
+                    size=self.input_shape[:2],
+                    crop_center=self.crop_center,
+                    crop_largest_rect=self.crop_largest_rect
+                )
+
+            # Add dimension to account for the channels if the image is greyscale
+            if image.ndim == 2:
+                image = np.expand_dims(image, axis=2)
+
+            # Store the image and label in their corresponding batches
+            batch_x[i] = image
+            batch_y[i] = rotation_angle
+
+        if self.one_hot:
+            # Convert the numerical labels to binary labels
+            batch_y = to_categorical(batch_y, 360)
+        else:
+            batch_y /= 360
+
+        # Preprocess input images
+        if self.preprocess_func:
+            batch_x = self.preprocess_func(batch_x)
+
+        return batch_x, batch_y
 
     def next(self):
         with self.lock:
             # get input data index and size of the current batch
             index_array = next(self.index_generator)
         # create array to hold the images
-        return self._get_batches_of_transformed_samples(index_array)
+        return self._get_batches_of_files(index_array)
 
 
 def display_examples(model, input, num_images=5, size=None, crop_center=False,
