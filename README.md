@@ -1,5 +1,5 @@
 # Added Work (Kelvin Villago)
-Run `python train/train_image2.py` to train on the images in the data folder. The photos used for training are stored in the data folder under the photos folder. 
+Run `python train/train_image2.py` to train on the images in the data folder. The photos used for training are stored in the data folder under the photos folder. The model file generated in the `train_image2.py` code is stored in the train/models folder. That file has to be moved to the main models folder for the Jupyter Notebook to access it. The results of the code can be accessed using the `test/test_photos.ipynb` file. 
 
 The `image_resizer.py` and the `image_generator.py` take photos from a path and outputs the generated photos into an output path. The paths can be changed as needed, but have to be changed in the software file.
 
